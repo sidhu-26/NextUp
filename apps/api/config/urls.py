@@ -56,4 +56,6 @@ urlpatterns = [
     path("api/health/", liveness_check, name="liveness-check"),
     path("api/health/ready/", readiness_check, name="readiness-check"),
     path("api/v1/auth/", include("modules.accounts.urls")),
+    path("api/v1/projects/", include("modules.projects.urls")),
+    path("api/v1/tasks/", include("modules.tasks.urls")),
 ]

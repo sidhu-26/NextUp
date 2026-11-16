@@ -54,9 +54,9 @@ THIRD_PARTY_APPS = [
 
 LOCAL_APPS = [
     "modules.accounts.apps.AccountsConfig",
+    "modules.projects.apps.ProjectsConfig",
+    "modules.tasks.apps.TasksConfig",
     # Domain modules will be registered here as they are developed:
-    # "modules.tasks",
-    # "modules.projects",
     # "modules.calendar",
     # "modules.scheduling",
     # "modules.activity",
