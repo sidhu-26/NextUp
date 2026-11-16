@@ -91,6 +91,24 @@ class AuthenticationApiTests(TestCase):
                 self.client.session.session_key, response.cookies.get("sessionid").value
             )
 
+    def test_valid_owner_login_with_email(self):
+        """Valid owner email returns 200 and establishes session."""
+        with self.settings(OWNER_EMAIL=self.owner_email):
+            csrf_token = self._get_csrf_token()
+            response = self.client.post(
+                self.login_url,
+                data={"username": self.owner_email, "password": self.owner_password},
+                content_type="application/json",
+                HTTP_X_CSRFTOKEN=csrf_token,
+            )
+
+            self.assertEqual(response.status_code, 200)
+            data = response.json()
+            self.assertEqual(data["username"], self.owner_username)
+            self.assertEqual(data["email"], self.owner_email)
+            self.assertEqual(data["id"], str(self.owner.id))
+            self.assertTrue(data["is_authenticated"])
+
     # 2. Invalid password
     def test_invalid_password(self):
         """Invalid password returns generic 401 error."""

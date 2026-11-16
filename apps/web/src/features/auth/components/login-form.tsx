@@ -25,7 +25,7 @@ export function LoginForm() {
     const errors: { username?: string; password?: string } = {};
 
     if (!username.trim()) {
-      errors.username = "Username is required.";
+      errors.username = "Username or email is required.";
     }
 
     if (!password) {
@@ -91,7 +91,7 @@ export function LoginForm() {
             htmlFor="username"
             className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
           >
-            Username
+            Username or Email
           </label>
           <input
             id="username"

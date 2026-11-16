@@ -31,6 +31,12 @@ ALLOWED_HOSTS = [
 # Custom User Model
 AUTH_USER_MODEL = "accounts.User"
 
+# Authentication Backends
+AUTHENTICATION_BACKENDS = [
+    "modules.accounts.backends.EmailOrUsernameModelBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+
 # Application definition
 DJANGO_APPS = [
     "django.contrib.admin",
