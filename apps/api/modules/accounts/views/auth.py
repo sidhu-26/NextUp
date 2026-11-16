@@ -11,11 +11,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.tokens import RefreshToken
 
-from modules.accounts.authentication import (
-    ApiSessionAuthentication,
-    EnforcedSessionAuthentication,
-)
 from modules.accounts.serializers.auth import LoginSerializer, UserSerializer
 from modules.accounts.services.auth import (
     authenticate_and_login_owner,
@@ -47,26 +44,20 @@ class CsrfInitView(APIView):
 
 
 class LoginView(APIView):
-    """Authenticate the application owner and establish a secure session.
+    """Authenticate the application owner and return JWT tokens (access and refresh).
 
     POST /api/v1/auth/login/
-    Enforces:
-    - CSRF protection via EnforcedSessionAuthentication.
-    - Rate limiting via LoginRateThrottle.
-    - Owner-identity verification.
-    - Session ID rotation.
-    - Generic error messages for failed attempts.
+    Supports simple login with email or username + password without requiring CSRF cookies.
     """
 
     permission_classes = [AllowAny]
-    authentication_classes = [EnforcedSessionAuthentication]
+    authentication_classes = []
     throttle_classes = [LoginRateThrottle]
 
     def post(self, request: Request) -> Response:
-        """Authenticate user credentials and start session."""
+        """Authenticate user credentials and return JWT tokens and user info."""
         serializer = LoginSerializer(data=request.data, context={"request": request})
         if not serializer.is_valid():
-            # Return generic error to prevent user enumeration
             return Response(
                 {"detail": "Invalid credentials provided."},
                 status=status.HTTP_401_UNAUTHORIZED,
@@ -87,26 +78,33 @@ class LoginView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
+        # Generate JWT Tokens
+        refresh = RefreshToken.for_user(user)
         user_serializer = UserSerializer(user)
-        return Response(user_serializer.data, status=status.HTTP_200_OK)
+
+        data = {
+            **user_serializer.data,
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+        }
+        return Response(data, status=status.HTTP_200_OK)
 
 
 class LogoutView(APIView):
     """Invalidate current session and clear authentication state.
 
     POST /api/v1/auth/logout/
-    Requires:
-    - POST method.
-    - CSRF token validation via EnforcedSessionAuthentication.
-    - Active session invalidation.
     """
 
     permission_classes = [AllowAny]
-    authentication_classes = [EnforcedSessionAuthentication]
+    authentication_classes = []
 
     def post(self, request: Request) -> Response:
         """Logout current user and invalidate session."""
-        terminate_session(request._request)
+        try:
+            terminate_session(request._request)
+        except Exception:
+            pass
         response = Response(
             {"detail": "Successfully logged out."},
             status=status.HTTP_200_OK,
@@ -118,11 +116,10 @@ class CurrentUserView(APIView):
     """Retrieve current authenticated user.
 
     GET /api/v1/auth/me/
-    Requires active authenticated session. Returns 401 when unauthenticated.
+    Accepts Bearer JWT Token or Session.
     """
 
     permission_classes = [IsAuthenticated]
-    authentication_classes = [ApiSessionAuthentication]
 
     def get(self, request: Request) -> Response:
         """Return serialized current user profile."""

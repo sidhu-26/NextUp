@@ -2,44 +2,48 @@
  * Authentication API services.
  */
 
-import { apiClient } from "@/lib/api-client";
+import {
+  apiClient,
+  clearStoredTokens,
+  setStoredTokens,
+} from "@/lib/api-client";
 import type {
   AuthUser,
-  CsrfResponse,
   LoginCredentials,
+  LoginResponse,
   LogoutResponse,
 } from "../types";
 
 export const authService = {
   /**
-   * Initialize CSRF cookie and obtain csrf token.
-   */
-  async initCsrf(): Promise<CsrfResponse> {
-    return apiClient<CsrfResponse>("/api/v1/auth/csrf/", {
-      method: "GET",
-    });
-  },
-
-  /**
-   * Authenticate owner and establish session.
+   * Authenticate owner with email/username and password.
+   * Returns JWT access/refresh tokens and stores them in localStorage.
    */
   async login(credentials: LoginCredentials): Promise<AuthUser> {
-    // Ensure CSRF cookie is initialized before submitting login
-    await this.initCsrf();
+      const res = await apiClient<LoginResponse>("/api/v1/auth/login/", {
+        method: "POST",
+        body: JSON.stringify(credentials),
+      });
 
-    return apiClient<AuthUser>("/api/v1/auth/login/", {
-      method: "POST",
-      body: JSON.stringify(credentials),
-    });
+      if(res.access) {
+      setStoredTokens(res.access, res.refresh);
+    }
+
+    return res;
   },
 
   /**
-   * Invalidate session and logout.
+   * Invalidate tokens and logout.
    */
   async logout(): Promise<LogoutResponse> {
-    return apiClient<LogoutResponse>("/api/v1/auth/logout/", {
-      method: "POST",
-    });
+    clearStoredTokens();
+    try {
+      return await apiClient<LogoutResponse>("/api/v1/auth/logout/", {
+        method: "POST",
+      });
+    } catch {
+      return { detail: "Logged out" };
+    }
   },
 
   /**

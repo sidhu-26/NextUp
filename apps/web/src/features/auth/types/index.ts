@@ -7,6 +7,13 @@ export interface AuthUser {
   username: string;
   email: string;
   is_authenticated: boolean;
+  access?: string;
+  refresh?: string;
+}
+
+export interface LoginResponse extends AuthUser {
+  access: string;
+  refresh: string;
 }
 
 export interface LoginCredentials {
