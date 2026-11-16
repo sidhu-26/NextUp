@@ -1,0 +1,40 @@
+services:
+  # ---------------------------------------------------------------------------
+  # Backend API Service (Django REST Framework)
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: personal-planner-api
+    runtime: python
+    rootDir: apps/api
+    buildCommand: uv sync --frozen && uv run python manage.py collectstatic --no-input
+    startCommand: uv run gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.14
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.production
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_ALLOWED_HOSTS
+        sync: false
+      - key: DATABASE_URL
+        sync: false # Connect to external Supabase PostgreSQL
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: CSRF_TRUSTED_ORIGINS
+        sync: false
+
+  # ---------------------------------------------------------------------------
+  # Frontend Web Service (Next.js)
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: personal-planner-web
+    runtime: node
+    rootDir: apps/web
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_VERSION
+        value: 22.16.0
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
