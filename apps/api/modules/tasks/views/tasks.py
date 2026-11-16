@@ -1,5 +1,6 @@
 """Views for NextUP tasks module."""
 
+from datetime import timedelta
 from uuid import UUID
 
 from django.core.exceptions import ValidationError as DjangoValidationError
@@ -12,7 +13,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from modules.accounts.permissions import IsOwner
-from modules.tasks.selectors import get_task_by_id_for_owner, get_tasks_for_owner
+from modules.tasks.selectors import (
+    check_task_conflicts_for_owner,
+    get_task_by_id_for_owner,
+    get_tasks_for_owner,
+)
 from modules.tasks.serializers import (
     TaskCreateSerializer,
     TaskSerializer,
@@ -51,27 +56,57 @@ class TaskListCreateView(APIView):
         include_subtasks_param = request.query_params.get("include_subtasks")
         due_after_param = request.query_params.get("due_after")
         due_before_param = request.query_params.get("due_before")
+        scheduled_from_param = request.query_params.get("scheduled_from")
+        scheduled_to_param = request.query_params.get("scheduled_to")
+        is_scheduled_param = request.query_params.get("is_scheduled")
         search_param = request.query_params.get("search")
         ordering_param = request.query_params.get("ordering")
 
-        # Parse datetime filters (support unencoded '+' if replaced by space in query string)
-        if due_after_param:
-            due_after = parse_datetime(due_after_param) or parse_datetime(
-                due_after_param.replace(" ", "+")
-            )
-        else:
-            due_after = None
+        def _parse_iso(val: str | None):
+            if not val:
+                return None
+            return parse_datetime(val) or parse_datetime(val.replace(" ", "+"))
 
-        if due_before_param:
-            due_before = parse_datetime(due_before_param) or parse_datetime(
-                due_before_param.replace(" ", "+")
+        # Parse datetime filters (support unencoded '+' if replaced by space in query string)
+        due_after = _parse_iso(due_after_param)
+        due_before = _parse_iso(due_before_param)
+        scheduled_from = _parse_iso(scheduled_from_param)
+        scheduled_to = _parse_iso(scheduled_to_param)
+
+        if scheduled_from_param and not scheduled_from:
+            return Response(
+                {"detail": "Invalid 'scheduled_from' datetime format."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
-        else:
-            due_before = None
+        if scheduled_to_param and not scheduled_to:
+            return Response(
+                {"detail": "Invalid 'scheduled_to' datetime format."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if scheduled_from and scheduled_to:
+            if scheduled_to <= scheduled_from:
+                return Response(
+                    {
+                        "detail": "'scheduled_to' must be strictly later than 'scheduled_from'."
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            # Enforce reasonable maximum date range (e.g., 90 days)
+            if scheduled_to - scheduled_from > timedelta(days=93):
+                return Response(
+                    {
+                        "detail": "Requested calendar date range exceeds the maximum allowed limit of 90 days."
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
         include_subtasks = None
         if include_subtasks_param is not None:
             include_subtasks = include_subtasks_param.lower() in ("true", "1")
+
+        is_scheduled = None
+        if is_scheduled_param is not None:
+            is_scheduled = is_scheduled_param.lower() in ("true", "1")
 
         tasks_qs = get_tasks_for_owner(
             owner=request.user,
@@ -82,6 +117,9 @@ class TaskListCreateView(APIView):
             include_subtasks=include_subtasks,
             due_after=due_after,
             due_before=due_before,
+            scheduled_from=scheduled_from,
+            scheduled_to=scheduled_to,
+            is_scheduled=is_scheduled,
             search=search_param,
             ordering=ordering_param,
         )
@@ -255,3 +293,72 @@ class TaskReopenView(APIView):
 
         reopened = reopen_task(task=task)
         return Response(TaskSerializer(reopened).data, status=status.HTTP_200_OK)
+
+
+class TaskConflictsView(APIView):
+    """Query potential scheduling overlaps for the authenticated owner.
+
+    GET /api/v1/tasks/conflicts/?start_at=...&end_at=...&exclude_task_id=...
+    Used for proactive overlap warnings during scheduling or dragging.
+    """
+
+    permission_classes = [IsAuthenticated, IsOwner]
+
+    def get(self, request: Request) -> Response:
+        start_param = request.query_params.get("start_at")
+        end_param = request.query_params.get("end_at")
+        exclude_id_param = request.query_params.get("exclude_task_id")
+
+        if not start_param or not end_param:
+            return Response(
+                {
+                    "detail": "Both 'start_at' and 'end_at' query parameters are required."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        start_at = parse_datetime(start_param) or parse_datetime(
+            start_param.replace(" ", "+")
+        )
+        end_at = parse_datetime(end_param) or parse_datetime(
+            end_param.replace(" ", "+")
+        )
+
+        if not start_at or not end_at:
+            return Response(
+                {"detail": "Invalid datetime format for 'start_at' or 'end_at'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if end_at <= start_at:
+            return Response(
+                {"detail": "'end_at' must be strictly later than 'start_at'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        exclude_task_id = None
+        if exclude_id_param:
+            try:
+                exclude_task_id = UUID(str(exclude_id_param))
+            except (ValueError, TypeError):
+                return Response(
+                    {"detail": "Invalid 'exclude_task_id' UUID format."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        conflicting_tasks = check_task_conflicts_for_owner(
+            owner=request.user,
+            start_time=start_at,
+            end_time=end_at,
+            exclude_task_id=exclude_task_id,
+        )
+
+        serializer = TaskSerializer(conflicting_tasks, many=True)
+        return Response(
+            {
+                "has_conflicts": len(serializer.data) > 0,
+                "conflicts_count": len(serializer.data),
+                "conflicts": serializer.data,
+            },
+            status=status.HTTP_200_OK,
+        )

@@ -48,6 +48,9 @@ export interface TaskFilterParams {
   include_subtasks?: boolean;
   due_after?: string;
   due_before?: string;
+  scheduled_from?: string;
+  scheduled_to?: string;
+  is_scheduled?: boolean;
   search?: string;
   ordering?: string;
   page?: number;

@@ -23,6 +23,11 @@ export const tasksService = {
     }
     if (params.due_after) searchParams.set("due_after", params.due_after);
     if (params.due_before) searchParams.set("due_before", params.due_before);
+    if (params.scheduled_from) searchParams.set("scheduled_from", params.scheduled_from);
+    if (params.scheduled_to) searchParams.set("scheduled_to", params.scheduled_to);
+    if (typeof params.is_scheduled === "boolean") {
+      searchParams.set("is_scheduled", params.is_scheduled.toString());
+    }
     if (params.search) searchParams.set("search", params.search);
     if (params.ordering) searchParams.set("ordering", params.ordering);
     if (params.page) searchParams.set("page", params.page.toString());
@@ -90,5 +95,26 @@ export const tasksService = {
     return apiClient<void>(`/api/v1/tasks/${id}/`, {
       method: "DELETE",
     });
+  },
+
+  /**
+   * Check for scheduling conflicts in a given interval.
+   */
+  async checkConflicts(
+    startAt: string,
+    endAt: string,
+    excludeTaskId?: string
+  ): Promise<{ has_conflicts: boolean; conflicts_count: number; conflicts: Task[] }> {
+    const searchParams = new URLSearchParams({
+      start_at: startAt,
+      end_at: endAt,
+    });
+    if (excludeTaskId) {
+      searchParams.set("exclude_task_id", excludeTaskId);
+    }
+    return apiClient<{ has_conflicts: boolean; conflicts_count: number; conflicts: Task[] }>(
+      `/api/v1/tasks/conflicts/?${searchParams.toString()}`,
+      { method: "GET" }
+    );
   },
 };

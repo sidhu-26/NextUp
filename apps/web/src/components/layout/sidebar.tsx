@@ -30,6 +30,7 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
 
   const navLinks = [
     { label: "Dashboard", href: "/dashboard", icon: DashboardIcon },
+    { label: "Calendar", href: "/calendar", icon: CalendarIcon },
     { label: "Inbox", href: "/tasks", icon: InboxIcon },
     { label: "Today", href: "/today", icon: CalendarIcon },
     { label: "Upcoming", href: "/upcoming", icon: ClockIcon },

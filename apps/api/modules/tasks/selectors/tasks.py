@@ -22,6 +22,9 @@ def get_tasks_for_owner(
     include_subtasks: bool | None = None,
     due_after: datetime | None = None,
     due_before: datetime | None = None,
+    scheduled_from: datetime | None = None,
+    scheduled_to: datetime | None = None,
+    is_scheduled: bool | None = None,
     search: str | None = None,
     ordering: str | None = None,
 ) -> QuerySet[Task]:
@@ -55,6 +58,29 @@ def get_tasks_for_owner(
     if due_before:
         queryset = queryset.filter(due_at__lte=due_before)
 
+    # Scheduled intervals overlapping [scheduled_from, scheduled_to)
+    # Task interval (scheduled_start_at, scheduled_end_at) overlaps with (scheduled_from, scheduled_to)
+    # when: scheduled_start_at < scheduled_to AND scheduled_end_at > scheduled_from
+    if scheduled_from and scheduled_to:
+        queryset = queryset.filter(
+            scheduled_start_at__lt=scheduled_to,
+            scheduled_end_at__gt=scheduled_from,
+        )
+    elif scheduled_from:
+        queryset = queryset.filter(scheduled_end_at__gt=scheduled_from)
+    elif scheduled_to:
+        queryset = queryset.filter(scheduled_start_at__lt=scheduled_to)
+
+    if is_scheduled is True:
+        queryset = queryset.filter(
+            scheduled_start_at__isnull=False,
+            scheduled_end_at__isnull=False,
+        )
+    elif is_scheduled is False:
+        queryset = queryset.filter(
+            Q(scheduled_start_at__isnull=True) | Q(scheduled_end_at__isnull=True)
+        )
+
     if search:
         search_query = search.strip()
         if search_query:
@@ -75,6 +101,10 @@ def get_tasks_for_owner(
         "-status": "-status",
         "title": "title",
         "-title": "-title",
+        "scheduled_start_at": "scheduled_start_at",
+        "-scheduled_start_at": "-scheduled_start_at",
+        "scheduled_end_at": "scheduled_end_at",
+        "-scheduled_end_at": "-scheduled_end_at",
     }
 
     if ordering and ordering in valid_orderings:
@@ -92,3 +122,29 @@ def get_task_by_id_for_owner(owner: "User", task_id: UUID | str) -> Task | None:
         .select_related("project", "parent_task")
         .first()
     )
+
+
+def check_task_conflicts_for_owner(
+    owner: "User",
+    start_time: datetime,
+    end_time: datetime,
+    exclude_task_id: UUID | str | None = None,
+) -> QuerySet[Task]:
+    """Find scheduled tasks owned by user that overlap with [start_time, end_time).
+
+    Two intervals (A, B) and (C, D) overlap if A < D and B > C.
+    Excludes the task being edited (if exclude_task_id is given).
+    Excludes cancelled tasks.
+    """
+    qs = Task.objects.filter(
+        owner=owner,
+        scheduled_start_at__isnull=False,
+        scheduled_end_at__isnull=False,
+        scheduled_start_at__lt=end_time,
+        scheduled_end_at__gt=start_time,
+    ).exclude(status="cancelled")
+
+    if exclude_task_id:
+        qs = qs.exclude(id=exclude_task_id)
+
+    return qs.select_related("project").order_by("scheduled_start_at")

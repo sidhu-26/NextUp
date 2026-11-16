@@ -138,6 +138,10 @@ class Task(models.Model):
             models.Index(
                 fields=["owner", "status", "due_at"], name="task_owner_stat_due_idx"
             ),
+            models.Index(
+                fields=["owner", "scheduled_start_at", "scheduled_end_at"],
+                name="task_owner_sched_idx",
+            ),
         ]
         constraints = [
             models.CheckConstraint(

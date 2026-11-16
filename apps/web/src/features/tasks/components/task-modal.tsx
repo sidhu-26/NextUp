@@ -13,6 +13,8 @@ interface TaskModalProps {
   taskToEdit?: Task | null;
   defaultProjectId?: string | null;
   defaultParentTaskId?: string | null;
+  defaultScheduledStartAt?: string | null;
+  defaultScheduledEndAt?: string | null;
 }
 
 export function TaskModal(props: TaskModalProps) {
@@ -25,6 +27,8 @@ function TaskModalContent({
   taskToEdit,
   defaultProjectId = null,
   defaultParentTaskId = null,
+  defaultScheduledStartAt = null,
+  defaultScheduledEndAt = null,
 }: TaskModalProps) {
   const { createTask, updateTask } = useTasks();
   const { activeProjects } = useProjects();
@@ -37,6 +41,20 @@ function TaskModalContent({
   const [parentTaskId, setParentTaskId] = useState<string>(taskToEdit?.parent_task?.id || defaultParentTaskId || "");
   const [dueDate, setDueDate] = useState<string>(
     taskToEdit?.due_at ? taskToEdit.due_at.slice(0, 16) : ""
+  );
+  const [scheduledStart, setScheduledStart] = useState<string>(
+    taskToEdit?.scheduled_start_at
+      ? taskToEdit.scheduled_start_at.slice(0, 16)
+      : defaultScheduledStartAt
+        ? defaultScheduledStartAt.slice(0, 16)
+        : ""
+  );
+  const [scheduledEnd, setScheduledEnd] = useState<string>(
+    taskToEdit?.scheduled_end_at
+      ? taskToEdit.scheduled_end_at.slice(0, 16)
+      : defaultScheduledEndAt
+        ? defaultScheduledEndAt.slice(0, 16)
+        : ""
   );
   const [estimatedMinutes, setEstimatedMinutes] = useState<string>(
     taskToEdit?.estimated_minutes ? taskToEdit.estimated_minutes.toString() : ""
@@ -77,7 +95,15 @@ function TaskModalContent({
     setError(null);
 
     const dueIso = dueDate ? new Date(dueDate).toISOString() : null;
+    const schedStartIso = scheduledStart ? new Date(scheduledStart).toISOString() : null;
+    const schedEndIso = scheduledEnd ? new Date(scheduledEnd).toISOString() : null;
     const estMin = estimatedMinutes ? parseInt(estimatedMinutes, 10) : null;
+
+    if (schedStartIso && schedEndIso && new Date(schedEndIso) <= new Date(schedStartIso)) {
+      setError("Scheduled end time must be strictly later than scheduled start time.");
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
       if (taskToEdit) {
@@ -89,6 +115,8 @@ function TaskModalContent({
           project_id: projectId || null,
           parent_task_id: parentTaskId || null,
           due_at: dueIso,
+          scheduled_start_at: schedStartIso,
+          scheduled_end_at: schedEndIso,
           estimated_minutes: estMin,
         });
       } else {
@@ -100,6 +128,8 @@ function TaskModalContent({
           project_id: projectId || null,
           parent_task_id: parentTaskId || null,
           due_at: dueIso,
+          scheduled_start_at: schedStartIso,
+          scheduled_end_at: schedEndIso,
           estimated_minutes: estMin,
         });
       }
@@ -238,6 +268,32 @@ function TaskModalContent({
                   </option>
                 ))}
               </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-1">
+                Scheduled Start
+              </label>
+              <input
+                type="datetime-local"
+                value={scheduledStart}
+                onChange={(e) => setScheduledStart(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-sm focus:outline-none focus:ring-2 focus:ring-violet-600"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-1">
+                Scheduled End
+              </label>
+              <input
+                type="datetime-local"
+                value={scheduledEnd}
+                onChange={(e) => setScheduledEnd(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-sm focus:outline-none focus:ring-2 focus:ring-violet-600"
+              />
             </div>
           </div>
 

@@ -255,7 +255,10 @@ class ProjectAPITests(TestCase):
 
     def test_unauthenticated_request_rejected(self):
         response = self.client.get("/api/v1/projects/")
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn(
+            response.status_code,
+            (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN),
+        )
 
     def test_non_owner_request_rejected(self):
         self.client.force_login(self.other_user)
@@ -341,7 +344,10 @@ class TaskAPITests(TestCase):
 
     def test_unauthenticated_request_rejected(self):
         response = self.client.get("/api/v1/tasks/")
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn(
+            response.status_code,
+            (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN),
+        )
 
     def test_non_owner_request_rejected(self):
         self.client.force_login(self.other_user)

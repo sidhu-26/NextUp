@@ -2,6 +2,7 @@
 
 from modules.tasks.views.tasks import (
     TaskCompleteView,
+    TaskConflictsView,
     TaskDetailView,
     TaskListCreateView,
     TaskReopenView,
@@ -9,6 +10,7 @@ from modules.tasks.views.tasks import (
 
 __all__ = [
     "TaskListCreateView",
+    "TaskConflictsView",
     "TaskDetailView",
     "TaskCompleteView",
     "TaskReopenView",
