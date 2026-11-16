@@ -3,6 +3,7 @@
 import os
 from pathlib import Path
 
+import dj_database_url
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -27,6 +28,9 @@ ALLOWED_HOSTS = [
     if host.strip()
 ]
 
+# Custom User Model
+AUTH_USER_MODEL = "accounts.User"
+
 # Application definition
 DJANGO_APPS = [
     "django.contrib.admin",
@@ -43,8 +47,8 @@ THIRD_PARTY_APPS = [
 ]
 
 LOCAL_APPS = [
-    # Domain modules will be registered here as they are developed
-    # "modules.accounts",
+    "modules.accounts.apps.AccountsConfig",
+    # Domain modules will be registered here as they are developed:
     # "modules.tasks",
     # "modules.projects",
     # "modules.calendar",
@@ -88,17 +92,33 @@ WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
 # Database configuration
-# Primary database: Supabase PostgreSQL (via DATABASE_URL)
-# Defaults to local SQLite in development when DATABASE_URL is not set
-import dj_database_url  # noqa: E402
+# In local development: defaults to SQLite if DATABASE_URL is not set.
+# In production: production.py enforces presence of DATABASE_URL with SSL mode.
+DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_CONNECT_TIMEOUT = int(os.getenv("DATABASE_CONNECT_TIMEOUT", "10"))
 
-DATABASES = {
-    "default": dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=600,
-        conn_health_checks=True,
-    )
-}
+if DATABASE_URL:
+    DATABASES = {
+        "default": dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=int(os.getenv("DATABASE_CONN_MAX_AGE", "600")),
+            conn_health_checks=True,
+            ssl_require=os.getenv("DATABASE_SSL_REQUIRE", "false").lower() == "true",
+        )
+    }
+    # Enforce connection timeout in database OPTIONS
+    DATABASES["default"].setdefault("OPTIONS", {})
+    if "connect_timeout" not in DATABASES["default"]["OPTIONS"]:
+        DATABASES["default"]["OPTIONS"]["connect_timeout"] = DATABASE_CONNECT_TIMEOUT
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+            "CONN_MAX_AGE": 600,
+            "CONN_HEALTH_CHECKS": True,
+        }
+    }
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [

@@ -20,12 +20,15 @@ NextUp is architected as a **modular monolith** with decoupled frontend clients 
 │                                                        │
 │  ┌──────────────────────────────────────────────────┐  │
 │  │ Django REST Framework API Layer                  │  │
+│  │ - Session Auth (Secure HTTP-only cookies)        │  │
+│  │ - Liveness & Readiness Probes                    │  │
 │  └──────────────────────────┬───────────────────────┘  │
 │                             ▼                          │
 │  ┌──────────────────────────────────────────────────┐  │
 │  │ Domain Service Layer (modules/*)                 │  │
-│  │ - Accounts    - Tasks     - Projects             │  │
-│  │ - Calendar    - Activity  - Scheduling          │  │
+│  │ - Accounts (Custom User, UUID PK, Normalization) │  │
+│  │ - Tasks        - Projects       - Calendar       │  │
+│  │ - Scheduling   - Activity                        │  │
 │  └──────┬───────────────────┬───────────────────────┘  │
 │         │                   │                          │
 │         ▼                   ▼                          │
@@ -38,7 +41,7 @@ NextUp is architected as a **modular monolith** with decoupled frontend clients 
 ┌────────────────────────────────────────────────────────┐
 │                External Infrastructure                 │
 │  ┌──────────────────────────────────────────────────┐  │
-│  │ Supabase PostgreSQL Database                     │  │
+│  │ Supabase PostgreSQL (Session Pooler Port 5432)   │  │
 │  └──────────────────────────────────────────────────┘  │
 └────────────────────────────────────────────────────────┘
 ```
@@ -51,12 +54,13 @@ NextUp is architected as a **modular monolith** with decoupled frontend clients 
 - **`apps/web`**: Next.js (App Router) web client using TypeScript and Tailwind CSS.
 - **`packages/`**: Monorepo shared packages reserved for code reused across multiple apps (such as future OpenAPI-generated TypeScript client contracts and shared types).
 - **`infrastructure/`**: Render Blueprints (`render.yaml`), Docker container setups, and operational scripts.
-- **`docs/`**: Comprehensive architecture documentation, ADRs, and API references.
+- **`docs/`**: Central knowledge base containing system blueprints, ADRs, and API references.
 
 ---
 
 ## 3. Backend & Frontend Boundaries
 
+- **Database Authority**: Supabase is strictly an external PostgreSQL provider. The Django ORM owns the schema and all migrations. No client-side database access exists.
 - **Authentication Boundary**: Authentication uses standard Django session authentication over secure, HTTP-only cookies for web interactions, preventing credential exposure to client-side scripts.
 - **Business Logic Boundary**: Views handle request parsing and response rendering only. All business operations are encapsulated in `services/` and data access queries in `selectors/`.
 - **Contracts**: The API schema will serve as the single source of truth. Future TypeScript types will be automatically generated from Django REST Framework OpenAPI specifications rather than manually duplicated.

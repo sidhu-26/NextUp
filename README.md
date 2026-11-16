@@ -6,7 +6,7 @@ NextUp is a modular personal productivity and planning application designed to e
 
 - **Backend**: Python 3.12+, Django, Django REST Framework, WhiteNoise, Gunicorn
 - **Frontend**: Next.js (App Router), React, TypeScript, Tailwind CSS
-- **Database**: Supabase PostgreSQL (Managed, external)
+- **Database**: Supabase PostgreSQL (Managed, external, accessed via Session Pooler)
 - **Authentication**: Django session-based authentication with secure HTTP-only cookies
 - **Hosting**: Render
 - **Package Management**: `uv` for Python (`apps/api`), `npm` for frontend (`apps/web`)
@@ -40,12 +40,13 @@ personal-planner/
 │       │   │   ├── base.py
 │       │   │   ├── development.py
 │       │   │   └── production.py
-│       │   ├── urls.py
+│       │   ├── urls.py          # Routing & health checks (liveness + readiness)
 │       │   ├── asgi.py
 │       │   └── wsgi.py
-│       ├── modules/             # Domain modules (accounts, tasks, projects, etc.)
+│       ├── modules/
+│       │   └── accounts/        # Custom User model (UUID PK, normalized email, provisioning)
 │       ├── common/              # Shared permissions, pagination, exceptions, utils
-│       ├── tests/               # Test suites
+│       ├── tests/               # Test suites (health, user model, provisioning, db config)
 │       ├── manage.py
 │       └── pyproject.toml
 │
@@ -87,6 +88,16 @@ npm install
 cd apps/api && uv sync && cd ../..
 ```
 
+### 3. Run Migrations & Provision Owner (Local Dev)
+```bash
+cd apps/api
+# Apply initial migrations (uses local SQLite by default or Supabase PostgreSQL if DATABASE_URL is set)
+uv run python manage.py migrate
+
+# Securely provision the initial owner account
+uv run python manage.py provision_owner --username admin --email admin@example.com --superuser
+```
+
 ---
 
 ## Development Commands
@@ -102,5 +113,5 @@ All key commands can be run from the repository root:
 | `npm run lint:web` | Run Next.js ESLint |
 | `npm run lint:api` | Run backend Ruff linter |
 | `npm run format:api` | Format backend code using Ruff |
-| `npm run test` | Run backend unit tests |
+| `npm run test` | Run backend unit tests via manage.py test |
 | `npm run test:api` | Run Django tests via manage.py |
