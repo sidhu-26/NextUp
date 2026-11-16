@@ -165,7 +165,30 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
     ],
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "100/minute",
+        "login": "5/minute",
+    },
 }
+
+# Session and Cookie Configuration
+SESSION_ENGINE = "django.contrib.sessions.backends.db"
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_AGE = int(os.getenv("SESSION_COOKIE_AGE", "1209600"))  # 14 days
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+SESSION_SAVE_EVERY_REQUEST = True
+
+# CSRF Cookie Configuration
+CSRF_COOKIE_HTTPONLY = False  # Must be readable by client JS to set X-CSRFToken header
+CSRF_COOKIE_SAMESITE = "Lax"
+
+# Owner Identity Configuration (Explicit single-user owner)
+OWNER_USERNAME = os.getenv("OWNER_USERNAME", "").strip()
+OWNER_EMAIL = os.getenv("OWNER_EMAIL", "").strip().lower()
 
 # CORS and CSRF configuration
 CORS_ALLOW_CREDENTIALS = True

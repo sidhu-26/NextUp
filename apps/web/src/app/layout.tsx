@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { AuthProvider } from "@/providers/auth-provider";
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: "NextUp | Personal Planner",
@@ -11,10 +13,10 @@ export const metadata: Metadata = {
     children: React.ReactNode;
   }>) {
     return (
-        <html lang="en">
-          <body className="antialiased min-h-screen bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
-            {children}
-          </body>
-        </html>
-        );
-}
+      <html lang="en">
+        <body className="antialiased min-h-screen bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
+          <AuthProvider>{children}</AuthProvider>
+        </body>
+      </html>
+    );
+  }

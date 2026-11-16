@@ -60,3 +60,15 @@ SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "31536000"))
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# Owner configuration verification in production
+# Fail closed if owner identity is missing
+_owner_username = os.environ.get("OWNER_USERNAME", "").strip()
+_owner_email = os.environ.get("OWNER_EMAIL", "").strip().lower()
+if not _owner_username and not _owner_email:
+    raise ImproperlyConfigured(
+        "Production environment requires OWNER_USERNAME or OWNER_EMAIL to be configured. "
+        "Fail closed to prevent unauthenticated or non-owner access."
+    )
+OWNER_USERNAME = _owner_username
+OWNER_EMAIL = _owner_email

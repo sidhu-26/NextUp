@@ -5,7 +5,7 @@ import logging
 from django.contrib import admin
 from django.db import connection
 from django.http import HttpRequest, JsonResponse
-from django.urls import path
+from django.urls import include, path
 
 logger = logging.getLogger(__name__)
 
@@ -55,4 +55,5 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/health/", liveness_check, name="liveness-check"),
     path("api/health/ready/", readiness_check, name="readiness-check"),
+    path("api/v1/auth/", include("modules.accounts.urls")),
 ]

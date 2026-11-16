@@ -25,6 +25,10 @@ services:
         value: "10"
       - key: DATABASE_CONN_MAX_AGE
         value: "600"
+      - key: OWNER_USERNAME
+        sync: false # Set to designated owner username
+      - key: OWNER_EMAIL
+        sync: false # Set to designated owner email
       - key: CORS_ALLOWED_ORIGINS
         sync: false
       - key: CSRF_TRUSTED_ORIGINS
@@ -42,5 +46,7 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 22.16.0
+      - key: INTERNAL_API_URL
+        sync: false # Set to internal backend URL (e.g. http://personal-planner-api:10000 or public API URL for rewrites)
       - key: NEXT_PUBLIC_API_URL
-        sync: false
+        sync: false # Optional: Set if direct public API routing is used instead of rewrites

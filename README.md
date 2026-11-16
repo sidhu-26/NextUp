@@ -115,3 +115,14 @@ All key commands can be run from the repository root:
 | `npm run format:api` | Format backend code using Ruff |
 | `npm run test` | Run backend unit tests via manage.py test |
 | `npm run test:api` | Run Django tests via manage.py |
+| `npm run test:web` | Run Next.js TypeScript type checking (`tsc --noEmit`) |
+
+---
+
+## Authentication & Security
+
+- **Architecture**: Django server-side sessions with HTTP-only cookies and same-origin Next.js rewrites (`/api/*`).
+- **CSRF Protection**: Universal CSRF enforcement across login, logout, and state-changing endpoints.
+- **Access Control**: Single-user owner enforcement (`OWNER_USERNAME` / `OWNER_EMAIL`). Fail-closed in production if unconfigured.
+- **Brute-Force Rate Limiting**: 5 login attempts per minute per IP address.
+- See [`docs/development/authentication.md`](docs/development/authentication.md) and [`docs/decisions/0003-session-authentication.md`](docs/decisions/0003-session-authentication.md) for complete details.

@@ -63,6 +63,7 @@ class DatabaseConfigurationTests(SimpleTestCase):
             "DATABASE_URL": "postgresql://postgres:secret@db.supabase.co:5432/postgres",
             "DATABASE_CONNECT_TIMEOUT": "7",
             "DATABASE_CONN_MAX_AGE": "300",
+            "OWNER_USERNAME": "admin",
         }
         with patch.dict(os.environ, env, clear=True):
             import importlib
@@ -77,3 +78,23 @@ class DatabaseConfigurationTests(SimpleTestCase):
             self.assertEqual(db_conf["OPTIONS"]["connect_timeout"], 7)
             self.assertEqual(db_conf["CONN_MAX_AGE"], 300)
             self.assertTrue(db_conf["CONN_HEALTH_CHECKS"])
+
+    def test_production_fails_when_owner_unconfigured(self):
+        """Production settings must fail if OWNER_USERNAME and OWNER_EMAIL are both missing."""
+        env = {
+            "DJANGO_SECRET_KEY": "test-secret-key",
+            "DJANGO_ALLOWED_HOSTS": "api.render.com",
+            "DATABASE_URL": "postgresql://postgres:secret@db.supabase.co:5432/postgres",
+            "OWNER_USERNAME": "",
+            "OWNER_EMAIL": "",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            with self.assertRaises(ImproperlyConfigured) as ctx:
+                import importlib
+
+                import config.settings.production as prod_settings
+
+                importlib.reload(prod_settings)
+            self.assertIn(
+                "Production environment requires OWNER_USERNAME", str(ctx.exception)
+            )

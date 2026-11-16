@@ -17,7 +17,7 @@
     "lint:api": "cd apps/api && uv run ruff check .",
     "format:api": "cd apps/api && uv run ruff format .",
     "test": "npm run test:api",
-    "test:api": "cd apps/api && uv run python manage.py test",
+    "test:api": "cd apps/api && uv run python manage.py test --keepdb",
     "test:web": "npm --workspace=apps/web test"
   },
   "devDependencies": {}

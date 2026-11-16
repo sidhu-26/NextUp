@@ -61,7 +61,7 @@ NextUp is architected as a **modular monolith** with decoupled frontend clients 
 ## 3. Backend & Frontend Boundaries
 
 - **Database Authority**: Supabase is strictly an external PostgreSQL provider. The Django ORM owns the schema and all migrations. No client-side database access exists.
-- **Authentication Boundary**: Authentication uses standard Django session authentication over secure, HTTP-only cookies for web interactions, preventing credential exposure to client-side scripts.
+- **Authentication Boundary**: Authentication uses standard Django session authentication over secure, HTTP-only cookies for web interactions, preventing credential exposure to client-side scripts. CSRF protection is strictly enforced across all state-changing endpoints, and owner identity is explicitly restricted. Next.js server rewrites provide a unified same-origin boundary.
 - **Business Logic Boundary**: Views handle request parsing and response rendering only. All business operations are encapsulated in `services/` and data access queries in `selectors/`.
 - **Contracts**: The API schema will serve as the single source of truth. Future TypeScript types will be automatically generated from Django REST Framework OpenAPI specifications rather than manually duplicated.
 
